@@ -1,22 +1,21 @@
 from django.contrib import admin
-from .models import Customer
+from .models import Product
 
-
-@admin.register(Customer)
-class CustomerAdmin(admin.ModelAdmin):
-    list_display = ("name", "type", "business_number", "phone", "created_at")
-    list_filter = ("type",)
-    search_fields = ("name", "business_number", "phone")
+@admin.register(Product)
+class ProductAdmin(admin.ModelAdmin):
+    list_display = ("sku", "name", "maker", "sale_price", "cost_price", "barcode", "is_active")
+    list_filter = ("is_active", "vat_type", "maker")
+    search_fields = ("sku", "name", "barcode", "maker")
+    list_editable = ("sale_price", "cost_price", "is_active")
+    list_per_page = 50
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        # 슈퍼유저는 전체, 일반 사용자는 자기 회사만
         if request.user.is_superuser:
             return qs
         return qs.filter(company=request.user.company)
 
     def save_model(self, request, obj, form, change):
-        # 일반 사용자가 거래처를 만들면 회사 자동 지정
         if not request.user.is_superuser and not obj.company_id:
             obj.company = request.user.company
         super().save_model(request, obj, form, change)
