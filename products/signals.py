@@ -80,3 +80,57 @@ def delete_salesitem_tx(sender, instance, **kwargs):
         recalc_inventory(company_id, product_id)
 
     transaction.on_commit(_apply)
+
+@receiver(pre_save, sender="purchase.PurchaseItem")
+def cache_old_purchaseitem(sender, instance, **kwargs):
+    if instance.pk:
+        try:
+            old = sender.objects.get(pk=instance.pk)
+            instance._old_product_id = old.product_id
+            instance._old_qty = old.quantity
+        except sender.DoesNotExist:
+            instance._old_product_id = None
+            instance._old_qty = None
+    else:
+        instance._old_product_id = None
+        instance._old_qty = None
+
+
+@receiver(post_save, sender="purchase.PurchaseItem")
+def upsert_purchaseitem_tx(sender, instance, created, **kwargs):
+    company_id = instance.company_id
+    product_id = instance.product_id
+
+    def _apply():
+        InventoryTx.objects.update_or_create(
+            tx_type="PURCHASE_ITEM",
+            source_id=instance.id,
+            defaults={
+                "company_id": company_id,
+                "product_id": product_id,
+                "qty_change": int(instance.quantity),
+            },
+        )
+
+        old_pid = getattr(instance, "_old_product_id", None)
+        if old_pid and old_pid != product_id:
+            recalc_inventory(company_id, old_pid)
+
+        recalc_inventory(company_id, product_id)
+
+    transaction.on_commit(_apply)
+
+
+@receiver(post_delete, sender="purchase.PurchaseItem")
+def delete_purchaseitem_tx(sender, instance, **kwargs):
+    company_id = instance.company_id
+    product_id = instance.product_id
+
+    def _apply():
+        InventoryTx.objects.filter(
+            tx_type="PURCHASE_ITEM",
+            source_id=instance.id
+        ).delete()
+        recalc_inventory(company_id, product_id)
+
+    transaction.on_commit(_apply)    

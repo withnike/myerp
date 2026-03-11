@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Product, Inventory
+from .models import Product, Inventory, InventoryTx
 
 
 @admin.register(Product)
@@ -33,3 +33,9 @@ class InventoryAdmin(admin.ModelAdmin):
         if request.user.is_superuser:
             return qs
         return qs.filter(company=request.user.company)
+    
+@admin.register(InventoryTx)
+class InventoryTxAdmin(admin.ModelAdmin):
+    list_display = ("product", "tx_type", "source_id", "qty_change", "created_at")
+    search_fields = ("product__sku", "product__name")
+    list_filter = ("tx_type",)    

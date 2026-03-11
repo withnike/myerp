@@ -13,7 +13,7 @@ class SalesItemInline(admin.TabularInline):
     autocomplete_fields = ("product",)  # ✅ 이 줄 추가!
 
     form = SalesItemForm
-
+    
     def get_formset(self, request, obj=None, **kwargs):
         formset = super().get_formset(request, obj, **kwargs)
 
@@ -34,7 +34,7 @@ class SalesSlipAdmin(admin.ModelAdmin):
     inlines = [SalesItemInline]
 
     autocomplete_fields = ("customer",)  # ✅ 추천
-
+    list_display = ("slip_no", "customer", "slip_date", "total_amount", "created_by")
     exclude = ("company", "created_by")  # (이미 적용했다면 유지)
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
